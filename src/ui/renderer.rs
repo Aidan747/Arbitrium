@@ -4,7 +4,7 @@ use egui::TextStyle;
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
-use crate::{data, ui::widgets};
+use crate::{data, ui::widgets::{self, data_controller_widget}};
 use egui_plot::{Line, Plot, PlotBounds, PlotPoints};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -69,7 +69,7 @@ impl eframe::App for App {
                     widgets::portfolio_data_viewer(self, ui);
                 }
                 AppPage::DataViewer => {
-                    ui.label("Data Viewer page");
+                    data_controller_widget(self, ui);
                 }
                 AppPage::TrainTest => {
                     ui.label("Train/Test page");

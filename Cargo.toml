@@ -8,6 +8,7 @@ chrono = { version = "0.4.41", features = ["serde"] }
 dotenv = "0.15.0"
 eframe = "0.31.1"
 egui = "0.31.1"
+egui_extras = {version = "*", features = ["datepicker"]}
 egui_plot = "0.32.1"
 lazy_static = "1.5.0"
 reqwest = { version = "0.12.20", features = ["json"] }

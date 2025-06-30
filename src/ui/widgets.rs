@@ -1,8 +1,10 @@
+
 use egui::Ui;
 use egui_plot::{Line, Plot, PlotPoints};
 use crate::ui::renderer::AppPage;
 
 use super::renderer::App;
+use chrono::{Date, DateTime, FixedOffset, Local, NaiveDate, TimeZone, Utc};
 
 pub fn navbar(app: &mut App, ui: &mut Ui) {
     ui.heading("Arbitrium App");
@@ -83,5 +85,17 @@ fn portfolio_holdings_table(app: &mut App, ui: &mut Ui) {
                 );
             }
         );
+    });
+}
+
+
+pub fn data_controller_widget(app: &mut App, ui: &mut Ui) {
+
+    let mut from_date = NaiveDate::default();
+    let mut to_date = NaiveDate::default();
+
+    ui.horizontal(|ui| {
+        ui.add(egui_extras::DatePickerButton::new(&mut from_date).id_salt("from_date_picker"));
+        ui.add(egui_extras::DatePickerButton::new(&mut to_date).id_salt("to_date_picker"));
     });
 }
