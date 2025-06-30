@@ -1,10 +1,11 @@
 use std::{default, sync::LazyLock};
 
+use egui::TextStyle;
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
-use crate::data;
-use egui_plot::{Line, Plot, PlotPoints};
+use crate::{data, ui::widgets};
+use egui_plot::{Line, Plot, PlotBounds, PlotPoints};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum QueuedOperation {
@@ -51,28 +52,21 @@ impl Default for App {
 impl eframe::App for App {
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.heading("Arbitrium App");
-
-            ui.horizontal(|ui| {
-                if ui.button("Home").clicked() {
-                    self.page = AppPage::Home;
-                }
-                if ui.button("Data Viewer").clicked() {
-                    self.page = AppPage::DataViewer;
-                }
-                if ui.button("Train/Test").clicked() {
-                    self.page = AppPage::TrainTest;
-                }
-                if ui.button("Trading Terminal").clicked() {
-                    self.page = AppPage::TradingTerminal;
-                }
-            });
-
-            ui.separator();
+            let visuals = egui::Visuals {
+                override_text_color: Some(egui::Color32::WHITE),
+                ..egui::Visuals::dark()
+            };
+            ctx.set_visuals(visuals);
+            
+            widgets::navbar(self, ui);
 
             match self.page {
                 AppPage::Home => {
-                    ui.label("Portfolio overview");
+                    ui.heading(format!("Total Value: ${}", 500));
+
+                    ui.add_space(2.5);
+            
+                    widgets::portfolio_data_viewer(self, ui);
                 }
                 AppPage::DataViewer => {
                     ui.label("Data Viewer page");
@@ -85,58 +79,7 @@ impl eframe::App for App {
                 }
             }
 
-            ui.separator();
-
-            ui.heading(format!("Total Value: ${}", 500));
-
-            ui.horizontal(|ui| {
-                // Placeholder graph using egui's plot widget
-
-                let points = PlotPoints::from_explicit_callback(|x| x.sin(), 0.0..10.0, 100);
-                let line = Line::new("test",points).name("Sine Wave");
-
-                let available_width = ui.available_width() * 0.7;
-                Plot::new("placeholder_plot")
-                    .width(available_width)
-                    .show(ui, |plot_ui| {
-                        plot_ui.line(line);
-                    });
-
-                ui.vertical(|ui| {
-                    ui.label("Portfolio Holdings");
-                    ui.allocate_ui_with_layout(
-                        ui.available_size() * egui::vec2(0.3, 1.0),
-                        egui::Layout::top_down(egui::Align::Min),
-                        |ui| {
-                            egui::Grid::new("portfolio_table")
-                                .striped(true)
-                                .show(ui, |ui| {
-                                    ui.heading("Symbol");
-                                    ui.heading("Shares");
-                                    ui.heading("Price");
-                                    ui.heading("Value");
-                                    ui.end_row();
-
-                                    // Example static data; replace with real data as needed
-                                    let holdings = vec![
-                                        ("AAPL", 10, 190.0),
-                                        ("GOOG", 5, 2800.0),
-                                        ("TSLA", 2, 700.0),
-                                    ];
-
-                                    for (symbol, shares, price) in holdings {
-                                        let value = shares as f64 * price;
-                                        ui.label(symbol);
-                                        ui.label(shares.to_string());
-                                        ui.label(format!("{:.2}", price));
-                                        ui.label(format!("{:.2}", value));
-                                        ui.end_row();
-                                    }
-                                });
-                        }
-                    )
-                });
-            });
+            // ui.separator();
         });
     }
 }
