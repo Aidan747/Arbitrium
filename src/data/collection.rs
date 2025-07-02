@@ -29,6 +29,30 @@ lazy_static! {
             }
         }
     };
+
+    static ref ALPACA_API_KEY: String = {
+        dotenv::dotenv().ok();
+        let key = dotenv::var("ALPACA_API_KEY");
+        match key {
+            Ok(k) => k,
+            Err(e) => {
+                eprintln!("[ERROR] Alpaca API key not found, check the .env file and try again");
+                std::process::exit(1)
+            }
+        }
+    };
+
+    static ref ALPACA_SECRET_KEY: String = {
+        dotenv::dotenv().ok();
+        let key = dotenv::var("ALPACA_SECRET_KEY");
+        match key {
+            Ok(k) => k,
+            Err(_) => {
+                eprintln!("[ERROR] Alpaca Secret Key not found, check the .env file and try again");
+                std::process::exit(1)
+            }
+        }
+    };
 }
 
 
@@ -39,13 +63,15 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         TickerDatatype::HistOHCL(from, to) => (from, to),
     };
 
-    let url = format!("https://api.polygon.io/v2/aggs/ticker/{}/range/1/{}/{from}/{to}", ticker.to_string(), point_time_delta.as_ref().to_ascii_lowercase());
+    let url = format!("https://data.alpaca.markets/v2/stocks/bars");
 
     let client = reqwest::Client::new();
     
     let resp = client
         .get(&url)
-        .header("Authorization", format!("Bearer {}", *POLYGON_API_KEY))
+        .header("APCA-API-KEY-ID", format!("{}", ALPACA_API_KEY.to_string()))
+        .header("APCA-API-SECRET-KEY", format!("{}", ALPACA_SECRET_KEY.to_string()))
+        .query(&[("symbols", ticker.to_string()), ("timeframe", String::from("1D")), ("start", from), ("end", to)])
         .send()
         .await?
         .text()
@@ -58,6 +84,7 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         .unwrap_or(&vec![])
         .iter()
         .map(|item| TickerDataframe {
+            t: item["t"].as_str().unwrap_or("").to_string(),
             open: item["o"].as_f64().unwrap_or(0.0) as f32,
             high: item["h"].as_f64().unwrap_or(0.0) as f32,
             close: item["c"].as_f64().unwrap_or(0.0) as f32,

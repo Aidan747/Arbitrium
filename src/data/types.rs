@@ -54,6 +54,7 @@ pub struct TickerData {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TickerDataframe {
+    pub t: String,
     pub open: f32,
     pub high: f32,
     pub close: f32,
