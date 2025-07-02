@@ -77,7 +77,10 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         .text()
         .await?;
 
+    println!("{}", resp);
+
     let resp: serde_json::Value = serde_json::from_str(&resp).unwrap();
+
 
     let price_data = resp["results"]
         .as_array()
