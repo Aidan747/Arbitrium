@@ -1,11 +1,29 @@
 use std::{default, sync::LazyLock};
 
+use chrono::NaiveDate;
 use egui::TextStyle;
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
 use crate::{data, ui::widgets::{self, data_controller_widget}};
 use egui_plot::{Line, Plot, PlotBounds, PlotPoints};
+
+#[derive(Debug, Clone, Copy)]
+pub struct DataPageState {
+    pub symbol_is_etf: bool,
+    pub from_date: NaiveDate,
+    pub to_date: NaiveDate,
+}
+
+impl Default for DataPageState {
+    fn default() -> Self {
+        Self { 
+            symbol_is_etf: false,
+            from_date: NaiveDate::default(),
+            to_date: NaiveDate::default(),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum QueuedOperation {
@@ -17,7 +35,7 @@ pub enum QueuedOperation {
 #[derive(Clone, Debug)]
 pub enum AppPage {
     Home,
-    DataViewer,
+    DataViewer(DataPageState),
     TrainTest,
     TradingTerminal,
 }
@@ -60,22 +78,28 @@ impl eframe::App for App {
             
             widgets::navbar(self, ui);
 
-            match self.page {
+            let page = std::mem::replace(&mut self.page, AppPage::Home);
+            
+            match page {
                 AppPage::Home => {
                     ui.heading(format!("Total Value: ${}", 500));
 
                     ui.add_space(2.5);
             
                     widgets::portfolio_data_viewer(self, ui);
+                    self.page = AppPage::Home;
                 }
-                AppPage::DataViewer => {
-                    data_controller_widget(self, ui);
+                AppPage::DataViewer(mut data) => {
+                    data_controller_widget(self, &mut data, ui);
+                    self.page = AppPage::DataViewer(data);
                 }
                 AppPage::TrainTest => {
                     ui.label("Train/Test page");
+                    self.page = AppPage::TrainTest;
                 }
                 AppPage::TradingTerminal => {
                     ui.label("Trading Terminal page");
+                    self.page = AppPage::TradingTerminal;
                 }
             }
 

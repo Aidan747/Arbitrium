@@ -11,12 +11,12 @@ static DB: LazyLock<Surreal<Client>> = LazyLock::new(Surreal::init);
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 
-    DB.connect::<Ws>("127.0.0.1:8000").await?;
+    // DB.connect::<Ws>("127.0.0.1:8000").await?;
 
-    DB.signin(Root {
-        username: "root",
-        password: "root",
-    }).await?;
+    // DB.signin(Root {
+    //     username: "root",
+    //     password: "root",
+    // }).await?;
 
     let options = eframe::NativeOptions::default();
     eframe::run_native(

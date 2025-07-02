@@ -1,10 +1,13 @@
 
 use egui::Ui;
 use egui_plot::{Line, Plot, PlotPoints};
-use crate::ui::renderer::AppPage;
+use crate::{data::{self, types::TickerDatatype}, ui::renderer::{AppPage, DataPageState}};
 
 use super::renderer::App;
-use chrono::{Date, DateTime, FixedOffset, Local, NaiveDate, TimeZone, Utc};
+use chrono::NaiveDate;
+
+
+
 
 pub fn navbar(app: &mut App, ui: &mut Ui) {
     ui.heading("Arbitrium App");
@@ -14,7 +17,7 @@ pub fn navbar(app: &mut App, ui: &mut Ui) {
             app.page = AppPage::Home;
         }
         if ui.button("Data Viewer").clicked() {
-            app.page = AppPage::DataViewer;
+            app.page = AppPage::DataViewer(DataPageState::default());
         }
         if ui.button("Train/Test").clicked() {
             app.page = AppPage::TrainTest;
@@ -89,13 +92,61 @@ fn portfolio_holdings_table(app: &mut App, ui: &mut Ui) {
 }
 
 
-pub fn data_controller_widget(app: &mut App, ui: &mut Ui) {
+pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
 
-    let mut from_date = NaiveDate::default();
-    let mut to_date = NaiveDate::default();
+    // let mut from_date = NaiveDate::default();
+    // let mut to_date = NaiveDate::default();
+
+    let mut fetch_data_clicked: bool = false;
+    let mut read_data_clicked: bool = false; 
+
+    ui.heading("Select Historical Data to Import:");
+    ui.add_space(7.5);
+
+    let text = match state.symbol_is_etf {
+        true => {"ETF"},
+        false => {"Common Stock"},
+        _ => {""}
+    };
 
     ui.horizontal(|ui| {
-        ui.add(egui_extras::DatePickerButton::new(&mut from_date).id_salt("from_date_picker"));
-        ui.add(egui_extras::DatePickerButton::new(&mut to_date).id_salt("to_date_picker"));
+        egui::containers::ComboBox::from_label("Symbol Type").selected_text(text).show_ui(ui, |box_ui| {
+            box_ui.selectable_value(&mut state.symbol_is_etf, true, "ETF" );
+            box_ui.selectable_value( &mut state.symbol_is_etf, false, "Common Stock" );
+        });
+
+        ui.label("From: ");
+        ui.add(egui_extras::DatePickerButton::new(&mut state.from_date).id_salt("from_date_picker"));
+
+        ui.label("To: ");
+        ui.add(egui_extras::DatePickerButton::new(&mut state.to_date).id_salt("to_date_picker"));
+
+        ui.label("For Symbol: ");
+        ui.text_edit_singleline(&mut app.input);
     });
+
+    ui.add_space(5.0);
+
+    ui.horizontal(|ui| {
+        fetch_data_clicked = ui.button("Fetch Data from Remote").clicked();
+        read_data_clicked = ui.button("Read Data").clicked();
+    });
+
+    ui.separator();
+
+    if fetch_data_clicked {
+
+        // println!("{:#?}", state.from_date);
+        // println!("{:#?}", state.to_date);
+        // println!("{:#?}", app.input.clone());
+
+        let data = futures::executor::block_on(
+            data::collection::get_ticker_data(app.input.clone(), TickerDatatype::HistOHCL(state.from_date.to_string(), state.to_date.to_string()), data::types::PointTimeDelta::Day)
+        ).unwrap();
+        
+        // println!("{:#?}", data);
+    }
+    
 }
+
+
