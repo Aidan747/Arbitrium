@@ -4,19 +4,21 @@ use surrealdb::{engine::remote::ws::{Client, Ws, Wss}, opt::auth::Root, Surreal}
 
 mod ui;
 mod data;
-
+mod analysis;
 
 static DB: LazyLock<Surreal<Client>> = LazyLock::new(Surreal::init);
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
 
-    // DB.connect::<Ws>("127.0.0.1:8000").await?;
+    DB.connect::<Ws>("127.0.0.1:8000").await?;
 
-    // DB.signin(Root {
-    //     username: "root",
-    //     password: "root",
-    // }).await?;
+    DB.signin(Root {
+        username: "root",
+        password: "root",
+    }).await?;
+
+    // analysis::hmm::train_hmm_on_symbol(&DB, "SPY".to_string());
 
     let options = eframe::NativeOptions::default();
     eframe::run_native(

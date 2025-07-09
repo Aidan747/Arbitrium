@@ -37,14 +37,32 @@ impl FromStr for Etf {
 
 #[derive(AsRefStr)]
 pub enum PointTimeDelta {
-    Second,
-    Minute,
-    Hour,
+    Minute(i32),
+    Hour(i32),
     Day,
     Week,
-    Month,
-    Quarter,
-    Year,
+    Month(i32),
+}
+impl ToString for PointTimeDelta {
+    fn to_string(&self) -> String {
+        let (val, unit) = match self {
+            PointTimeDelta::Minute(val) => (val.clamp(&1, &59), self.as_ref()),
+            PointTimeDelta::Hour(val) => (val.clamp(&1, &23), self.as_ref()),
+            PointTimeDelta::Day => (&1, self.as_ref()),
+            PointTimeDelta::Week => (&1, self.as_ref()),
+            PointTimeDelta::Month(val) => {
+                let checked_val = if [1,2,3,4,6,12].contains(val) {
+                    val
+                } else {
+                    &1
+                };
+                (checked_val, self.as_ref())
+            },
+        };
+        let res = format!("{val}{unit}");
+
+        res
+    }
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -52,7 +70,7 @@ pub struct TickerData {
     pub price_data: Vec<TickerDataframe>,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, Default)]
 pub struct TickerDataframe {
     pub t: String,
     pub open: f32,

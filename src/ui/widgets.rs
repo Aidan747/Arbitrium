@@ -1,7 +1,9 @@
 
 use egui::Ui;
+use egui_extras::{Column, TableBuilder};
 use egui_plot::{Line, Plot, PlotPoints};
-use crate::{data::{self, types::TickerDatatype}, ui::renderer::{AppPage, DataPageState}};
+use futures::future;
+use crate::{data::{self, types::{TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
 
 use super::renderer::App;
 use chrono::NaiveDate;
@@ -20,7 +22,7 @@ pub fn navbar(app: &mut App, ui: &mut Ui) {
             app.page = AppPage::DataViewer(DataPageState::default());
         }
         if ui.button("Train/Test").clicked() {
-            app.page = AppPage::TrainTest;
+            app.page = AppPage::TrainTest(TrainTestPageState::default());
         }
         if ui.button("Trading Terminal").clicked() {
             app.page = AppPage::TradingTerminal;
@@ -99,6 +101,7 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
 
     let mut fetch_data_clicked: bool = false;
     let mut read_data_clicked: bool = false; 
+    let mut write_data_clicked: bool = false;
 
     ui.heading("Select Historical Data to Import:");
     ui.add_space(7.5);
@@ -130,23 +133,148 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
     ui.horizontal(|ui| {
         fetch_data_clicked = ui.button("Fetch Data from Remote").clicked();
         read_data_clicked = ui.button("Read Data").clicked();
+        write_data_clicked = ui.button("Send Data to DB").clicked();
     });
 
     ui.separator();
 
     if fetch_data_clicked {
 
-        // println!("{:#?}", state.from_date);
-        // println!("{:#?}", state.to_date);
-        // println!("{:#?}", app.input.clone());
-
         let data = futures::executor::block_on(
             data::collection::get_ticker_data(app.input.clone(), TickerDatatype::HistOHCL(state.from_date.to_string(), state.to_date.to_string()), data::types::PointTimeDelta::Day)
         ).unwrap();
         
         // println!("{:#?}", data);
+
+        state.ticker_data = Some(data);
+    }
+    data_table_widget(app, state, ui);
+
+    if write_data_clicked {
+        let input = app.input.clone();
+        let data = state.ticker_data.clone().unwrap();
+        // let database = app.database.clone(); // Ensure `database` implements `Clone`
+        futures::executor::block_on(async {
+            let _ = app.database.use_ns("ETFs").use_db(input).await;
+
+            for entry in data.price_data.iter() {
+                let entry = entry.clone();
+                let res: Option<TickerDataframe> = app.database
+                    .upsert(("PriceData", &entry.t))
+                    .merge(entry)
+                    .await
+                    .unwrap();
+                println!("{:#?}", res);
+            }
+        });
     }
     
 }
+fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
+    let available_width = ui.available_width();
+    let available_height= ui.available_height();
+
+    ui.horizontal(|ui| {
+        ui.set_min_height(available_height);
+        // Left: Table (25% width)
+        ui.vertical(|table_ui| {
+            let table_width = available_width * 0.25;
+            table_ui.set_max_width(table_width);
+
+            table_ui.heading("Data Points: ");
+            table_ui.add_space(5.0);
+
+            egui::ScrollArea::vertical()
+                .show(table_ui, |ui| {
+                    if state.ticker_data.is_none() {
+                        ui.label("No Data Loaded...");
+                        return;
+                    }
+                    TableBuilder::new(ui)
+                        .column(Column::auto().at_most(table_width / 3.0).clip(true).resizable(true))
+                        .columns(Column::remainder().clip(true), 5)
+                        .striped(true)
+                        .header(20.0, |mut header| {
+                            header.col(|ui| {
+                                ui.heading("Date");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Open");
+                            });
+                            header.col(|ui| {
+                                ui.heading("High");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Low");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Close");
+                            });
+                            header.col(|ui| {
+                                ui.heading("Volume");
+                            });                            
+                        })
+                        .body(|mut body| {
+                            if let Some(ticker_data) = &state.ticker_data {
+                                body.rows(20.0, ticker_data.price_data.len(), |mut row| {
+                                    let val = ticker_data.price_data.get(row.index()).unwrap();
+                                    row.col(|ui| {
+                                        ui.label(format!("{}", val.t));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}", val.open));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}", val.high));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}", val.low));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}", val.close));
+                                    });
+                                    row.col(|ui| {
+                                        ui.label(format!("{:.2}", val.vol));
+                                    });
+                                });
+                            }
+                        }
+                    );
+                }
+            );
+            
+        });
+
+        // Right: Plot (75% width)
+        ui.vertical(|graph_ui| {
+            let mut datapoints = PlotPoints::new(vec![]);
+            if let Some(ticker_data) = &state.ticker_data {
+                datapoints = PlotPoints::from_iter({
+                    ticker_data.price_data
+                        .iter()
+                        .enumerate()
+                        .map(|(date, data)| {
+                            [date as f64, data.close as f64]
+                        })
+                    }
+                );
+            }
+            let line = Line::new("ticker_price_over_time", datapoints);
+            Plot::new("ticker_data_plot").show(graph_ui, |graph_inner_ui| {
+                graph_inner_ui.line(line);
+            });
 
 
+        });
+    });
+}
+
+pub fn train_test_widget(app: &mut App, ui: &mut Ui, state: &mut TrainTestPageState) {
+    ui.heading("Train/Test Configuration");
+
+    ui.horizontal(|ui| {
+        ui.checkbox(&mut state.use_stored_data, "Use Stored DB Data");
+        ui.checkbox(&mut state.train_time_series_corr, "Find Correlations");
+        // ui.checkbox(checked, text)
+    });
+}

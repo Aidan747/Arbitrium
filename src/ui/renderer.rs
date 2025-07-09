@@ -5,22 +5,32 @@ use egui::TextStyle;
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
-use crate::{data, ui::widgets::{self, data_controller_widget}};
+use crate::{data::{self, types::TickerData}, ui::widgets::{self, data_controller_widget}};
 use egui_plot::{Line, Plot, PlotBounds, PlotPoints};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct DataPageState {
     pub symbol_is_etf: bool,
     pub from_date: NaiveDate,
     pub to_date: NaiveDate,
+    pub ticker_data: Option<TickerData>
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct TrainTestPageState {
+    pub use_stored_data: bool,
+    pub train_time_series_corr: bool,
+    pub get_sma: bool,
+
 }
 
 impl Default for DataPageState {
     fn default() -> Self {
         Self { 
             symbol_is_etf: false,
-            from_date: NaiveDate::default(),
-            to_date: NaiveDate::default(),
+            from_date: NaiveDate::from_ymd_opt(2016, 01, 01).unwrap(),
+            to_date: NaiveDate::from_ymd_opt(2016, 01, 01).unwrap(),
+            ticker_data: None,
         }
     }
 }
@@ -32,11 +42,12 @@ pub enum QueuedOperation {
     NOOP,
     SYMBOL(Vec<data::types::TickerDataframe>)
 }
+
 #[derive(Clone, Debug)]
 pub enum AppPage {
     Home,
     DataViewer(DataPageState),
-    TrainTest,
+    TrainTest(TrainTestPageState),
     TradingTerminal,
 }
 
@@ -93,9 +104,9 @@ impl eframe::App for App {
                     data_controller_widget(self, &mut data, ui);
                     self.page = AppPage::DataViewer(data);
                 }
-                AppPage::TrainTest => {
-                    ui.label("Train/Test page");
-                    self.page = AppPage::TrainTest;
+                AppPage::TrainTest(mut data) => {
+                    widgets::train_test_widget(self, ui, &mut data);
+                    self.page = AppPage::TrainTest(data);
                 }
                 AppPage::TradingTerminal => {
                     ui.label("Trading Terminal page");

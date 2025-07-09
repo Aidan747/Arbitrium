@@ -67,22 +67,51 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
 
     let client = reqwest::Client::new();
     
-    let resp = client
-        .get(&url)
-        .header("APCA-API-KEY-ID", format!("{}", ALPACA_API_KEY.to_string()))
-        .header("APCA-API-SECRET-KEY", format!("{}", ALPACA_SECRET_KEY.to_string()))
-        .query(&[("symbols", ticker.to_string()), ("timeframe", String::from("1D")), ("start", from), ("end", to)])
-        .send()
-        .await?
-        .text()
-        .await?;
+    let mut all_bars = Vec::new();
+    let mut next_page_token: Option<String> = None;
 
-    println!("{}", resp);
+    loop {
+        let mut req = client
+            .get(&url)
+            .header("APCA-API-KEY-ID", ALPACA_API_KEY.as_str())
+            .header("APCA-API-SECRET-KEY", ALPACA_SECRET_KEY.as_str())
+            .query(&[
+                ("symbols", ticker.to_string()),
+                ("timeframe", point_time_delta.to_string()),
+                ("start", from.clone()),
+                ("end", to.clone()),
+            ]);
+
+        if let Some(ref token) = next_page_token {
+            req = req.query(&[("page_token", token.clone())]);
+        }
+
+        let resp_text = req.send().await?.text().await?;
+        let resp_json: serde_json::Value = serde_json::from_str(&resp_text).unwrap();
+
+        let bars = resp_json["bars"][ticker.to_string()]
+            .as_array()
+            .unwrap_or(&vec![])
+            .clone();
+
+        all_bars.extend(bars);
+
+        next_page_token = resp_json["next_page_token"].as_str().map(|s| s.to_string());
+        if next_page_token.is_none() {
+            break;
+        }
+    }
+
+    // Build a fake JSON response with all bars for downstream code
+    let mut resp = serde_json::Map::new();
+    let mut bars_map = serde_json::Map::new();
+    bars_map.insert(ticker.to_string(), serde_json::Value::Array(all_bars));
+    resp.insert("bars".to_string(), serde_json::Value::Object(bars_map));
+    let resp = serde_json::Value::Object(resp).to_string();
 
     let resp: serde_json::Value = serde_json::from_str(&resp).unwrap();
 
-
-    let price_data = resp["results"]
+    let price_data = resp["bars"][ticker.to_string()]
         .as_array()
         .unwrap_or(&vec![])
         .iter()
@@ -103,8 +132,9 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         })
         .collect();
 
-    Ok(TickerData { price_data })
+    // println!("{}", resp);
 
+    Ok(TickerData { price_data })
 }
 
 pub async fn get_etf_holdings(etf: Etf, n: i32) -> Result<Vec<(String, f32)>, reqwest::Error> {
