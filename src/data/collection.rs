@@ -134,7 +134,11 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
 
     // println!("{}", resp);
 
-    Ok(TickerData { price_data })
+    Ok(TickerData {
+        symbol: ticker.to_string(), 
+        price_data: price_data,
+        technicals: Vec::new()
+    })
 }
 
 pub async fn get_etf_holdings(etf: Etf, n: i32) -> Result<Vec<(String, f32)>, reqwest::Error> {

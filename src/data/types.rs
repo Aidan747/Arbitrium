@@ -67,7 +67,9 @@ impl ToString for PointTimeDelta {
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct TickerData {
+    pub symbol: String,
     pub price_data: Vec<TickerDataframe>,
+    pub technicals: Vec<Technicals>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, Default)]
@@ -79,4 +81,11 @@ pub struct TickerDataframe {
     pub low: f32,
     pub vol: i64,
     pub vol_weighted: f32,
+}
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Technicals {
+    pub volatility_at_t: f32,
+    pub sma: f32,
+    pub rsi: f32,
+    pub analyst_target: f32,
 }
