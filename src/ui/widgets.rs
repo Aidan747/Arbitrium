@@ -3,7 +3,7 @@ use egui::Ui;
 use egui_extras::{Column, TableBuilder};
 use egui_plot::{Line, Plot, PlotPoints};
 use futures::future;
-use crate::{data::{self, types::{TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
+use crate::{analysis, data::{self, types::{TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
 
 use super::renderer::App;
 use chrono::NaiveDate;
@@ -248,6 +248,8 @@ fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
         // Right: Plot (75% width)
         ui.vertical(|graph_ui| {
             let mut datapoints = PlotPoints::new(vec![]);
+            let mut sma_points = PlotPoints::new(vec![]);
+
             if let Some(ticker_data) = &state.ticker_data {
                 datapoints = PlotPoints::from_iter({
                     ticker_data.price_data
@@ -258,10 +260,18 @@ fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
                         })
                     }
                 );
+                sma_points = PlotPoints::from_iter(analysis::sma::sma_on_series(ticker_data.price_data.clone(), 50).iter().enumerate().map(|(date, data)| {
+                    [date as f64, data.close as f64]
+                }));
             }
+
+            
+            
             let line = Line::new("ticker_price_over_time", datapoints);
+            let sma = Line::new("sma_lin", sma_points);
             Plot::new("ticker_data_plot").show(graph_ui, |graph_inner_ui| {
                 graph_inner_ui.line(line);
+                graph_inner_ui.line(sma);
             });
 
 

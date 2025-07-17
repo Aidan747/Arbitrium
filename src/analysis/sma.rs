@@ -26,11 +26,17 @@ pub fn sma_on_series(series: Vec<TickerDataframe>, sma_period_days: i32) -> Vec<
         return ret;
     }
 
-    let pd0 = recip_k * ((n - series.len() + 1)..n).into_iter().for_each(|i| {
-        series.get(i).unwrap().close
-    });
-
-
+    series.iter()
+        .as_slice()
+        .windows(sma_period_days as usize)
+        .for_each(|el| {
+            let window_sum: f32 = el.iter().map(|v| v.close).sum();
+            ret.push(TickerDataframe {
+                close: window_sum * recip_k,
+                ..el[0].clone()
+            });
+        });
 
     ret
 }
+
