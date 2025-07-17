@@ -1,3 +1,5 @@
+use ndarray::{Array3, Shape};
+
 use crate::data::types::{TickerData, TickerDataframe};
 
 pub fn ticker_volatility_series(data: TickerData) -> f32 {
@@ -35,4 +37,14 @@ pub fn get_vix_along_data(data: TickerData) -> Vec<TickerDataframe> {
     });
     
     vol_series.clone()
+}
+
+pub fn calculate_volatility_surface(data: TickerData) -> Array3<f32> {
+    let mut surface = Array3::<f32>::zeros((3, 1, 1));
+
+    let ticker = data.symbol;
+    
+
+
+    surface
 }

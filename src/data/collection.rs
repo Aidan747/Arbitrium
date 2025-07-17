@@ -1,7 +1,13 @@
-use reqwest::{header::{HeaderMap, HeaderValue}, Request};
+use futures::SinkExt;
+use reqwest::{header::{HeaderMap, HeaderValue}, Client, Request};
+use reqwest_websocket::RequestBuilderExt;
 use ::serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
+use core::time;
 use std::result::Result;
+use chrono::{DateTime, Utc};
+use chrono::{Datelike, Timelike};
+use chrono_tz::{America::New_York, Tz};
 use super::types::*;
 
 
@@ -57,7 +63,7 @@ lazy_static! {
 
 
 pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, point_time_delta: PointTimeDelta,) -> Result<TickerData, reqwest::Error> {
-    let (from, to) = match datatype {
+    let (from, to) = match &datatype {
         TickerDatatype::HistPrice(from, to) => (from, to),
         TickerDatatype::HistVolume(from, to) => (from, to),
         TickerDatatype::HistOHCL(from, to) => (from, to),
@@ -133,6 +139,13 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         .collect();
 
     // println!("{}", resp);
+    // if matches!(&datatype, TickerDatatype::HistPrice(_, _)) {
+    //     return Ok(TickerData { 
+    //         symbol: ticker.to_string(),
+    //         price_data: price_data,
+    //         technicals: () 
+    //     });
+    // } 
 
     Ok(TickerData {
         symbol: ticker.to_string(), 
@@ -168,4 +181,32 @@ pub async fn get_etf_holdings(etf: Etf, n: i32) -> Result<Vec<(String, f32)>, re
         .collect();
 
     Ok(symbols)
+}
+
+pub async fn get_options_chain(ticker: impl ToString, date: Option<DateTime<Tz>>) -> Vec<StockOption> {
+    let mut option_chain = Vec::new();
+
+    let client = reqwest::Client::new();
+
+    let response = client
+        .get(format!("https://www.alphavantage.co/"))
+        .query(&[
+            ("function", "HISTORICAL_OPTIONS"),
+            ("symbol", &ticker.to_string()),
+            ("apikey", &ALPHA_VANTAGE_API_KEY),
+            ]
+            .into_iter()
+            .chain(
+                date.map(|day| {
+                vec![(
+                    "date",
+                    format!("{}-{}-{}", day.year(), day.month(), day.day()),
+                )]
+                })
+                .unwrap_or_default(),
+            )
+            .collect::<Vec<_>>()
+        
+
+    option_chain
 }

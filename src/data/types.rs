@@ -1,3 +1,4 @@
+use chrono::{DateTime, Offset, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
 use std::str::FromStr;
@@ -8,6 +9,7 @@ pub struct EtfHolding {
     pub weight: f32
 }
 
+#[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
 pub enum TickerDatatype {
     HistPrice(String, String),
     HistVolume(String, String),
@@ -88,4 +90,14 @@ pub struct Technicals {
     pub sma: f32,
     pub rsi: f32,
     pub analyst_target: f32,
+}
+
+#[derive(Default, Debug)]
+pub struct StockOption {
+    pub ticker: String,
+    pub time_to_expiry: DateTime<Utc>,
+    pub strike_price: f32,
+    pub underlying_asset_price: f32,
+    pub open_interest: f32,
+    pub volume: f32,
 }
