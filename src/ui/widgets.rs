@@ -158,7 +158,7 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
             let _ = app.database.use_ns("ETFs").use_db(input).await;
 
             for entry in data.price_data.iter() {
-                let entry = entry.clone();
+                let entry: TickerDataframe = entry.clone();
                 let res: Option<TickerDataframe> = app.database
                     .upsert(("PriceData", &entry.t))
                     .merge(entry)
@@ -260,7 +260,7 @@ fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
                         })
                     }
                 );
-                sma_points = PlotPoints::from_iter(analysis::sma::sma_on_series(ticker_data.price_data.clone(), 50).iter().enumerate().map(|(date, data)| {
+                sma_points = PlotPoints::from_iter(analysis::moving_average::sma_on_series(ticker_data.price_data.clone(), 50).iter().enumerate().map(|(date, data)| {
                     [date as f64, data.close as f64]
                 }));
             }

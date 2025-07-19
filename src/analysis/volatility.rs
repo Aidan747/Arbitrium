@@ -1,6 +1,6 @@
 use ndarray::{Array3, Shape};
 
-use crate::data::types::{TickerData, TickerDataframe};
+use crate::data::{collection, types::{OptionChain, TickerData, TickerDataframe}};
 
 pub fn ticker_volatility_series(data: TickerData) -> f32 {
     let closing_prices = data.price_data.iter().map(|el| {
@@ -39,12 +39,35 @@ pub fn get_vix_along_data(data: TickerData) -> Vec<TickerDataframe> {
     vol_series.clone()
 }
 
-pub fn calculate_volatility_surface(data: TickerData) -> Array3<f32> {
+pub fn calculate_volatility_surface(options: OptionChain) -> Array3<f32> {
     let mut surface = Array3::<f32>::zeros((3, 1, 1));
 
-    let ticker = data.symbol;
-    
+    let ticker = options.data.get(0).unwrap().contract_id
+        .chars()
+        .take_while(|c| !c.is_ascii_digit() || c.is_ascii_digit() && c == &'0')
+        .collect::<String>();
 
+    let ivs = options.data
+        .iter()
+        .map(|el| el.implied_volatility)
+        .collect::<Vec<_>>();
+    
+    let time_to_exp = options.data
+        .iter()
+        .map(|el| {
+            let expiration = el.expiry_date;
+            let delta = expiration.signed_duration_since(expiration);
+            delta.num_days()
+        })
+        .collect::<Vec<_>>();
+
+    let moneyness = options.data
+        .iter()
+        .map(|el| {
+            // let market_price = 
+            0.0
+        })
+        .collect::<Vec<_>>();
 
     surface
 }

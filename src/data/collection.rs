@@ -1,13 +1,8 @@
-use futures::SinkExt;
-use reqwest::{header::{HeaderMap, HeaderValue}, Client, Request};
-use reqwest_websocket::RequestBuilderExt;
-use ::serde::{Deserialize, Serialize};
 use lazy_static::lazy_static;
-use core::time;
 use std::result::Result;
-use chrono::{DateTime, Utc};
-use chrono::{Datelike, Timelike};
-use chrono_tz::{America::New_York, Tz};
+use chrono::DateTime;
+use chrono::Datelike;
+use chrono_tz::Tz;
 use super::types::*;
 
 
@@ -183,30 +178,35 @@ pub async fn get_etf_holdings(etf: Etf, n: i32) -> Result<Vec<(String, f32)>, re
     Ok(symbols)
 }
 
-pub async fn get_options_chain(ticker: impl ToString, date: Option<DateTime<Tz>>) -> Vec<StockOption> {
-    let mut option_chain = Vec::new();
-
+pub async fn get_options_chain(ticker: impl ToString, date: Option<DateTime<Tz>>) -> Result<OptionChain, reqwest::Error> {
     let client = reqwest::Client::new();
 
-    let response = client
-        .get(format!("https://www.alphavantage.co/"))
-        .query(&[
-            ("function", "HISTORICAL_OPTIONS"),
-            ("symbol", &ticker.to_string()),
-            ("apikey", &ALPHA_VANTAGE_API_KEY),
-            ]
-            .into_iter()
-            .chain(
-                date.map(|day| {
-                vec![(
-                    "date",
-                    format!("{}-{}-{}", day.year(), day.month(), day.day()),
-                )]
-                })
-                .unwrap_or_default(),
-            )
-            .collect::<Vec<_>>()
-        
+    let symbol = ticker.to_string().clone();
 
-    option_chain
+    let response = client
+        .get(format!("https://www.alphavantage.co/query"))
+        .query(
+            &{
+                let mut params = vec![
+                    ("function", "HISTORICAL_OPTIONS"),
+                    ("symbol", symbol.as_str()),
+                    ("apikey", ALPHA_VANTAGE_API_KEY.as_str()),
+                ];
+                if let Some(day) = date {
+                    let date_str = format!("{}-{}-{}", day.year(), day.month(), day.day());
+                    params.push(("date", Box::leak(date_str.into_boxed_str())));
+                }
+                params
+            }
+        )
+        .send()
+        .await?;
+        
+    let json = response.text().await.unwrap().replace("\"endpoint\": \"Historical Options\",", "").replace("\"message\": \"success\",", "");
+
+    let serialized_data: OptionChain = serde_json::from_str(&json).unwrap();
+
+    Ok(serialized_data)
 }
+
+

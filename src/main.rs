@@ -32,9 +32,15 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::types::{TickerData, TickerDataframe};
+    use crate::data::{collection, types::{TickerData, TickerDataframe}};
 
     use super::*;
 
+    #[tokio::test]
+    pub async fn test_option_chain_fetch() {
+        let ret = collection::get_options_chain("NVDA", None).await.unwrap();
+
+        println!("{:#?}", ret);
+    }
 }
 
