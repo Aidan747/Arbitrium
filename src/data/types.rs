@@ -1,12 +1,13 @@
 use chrono::{DateTime, NaiveDate, Offset, TimeZone, Utc};
 use serde::{Deserialize, Serialize};
 use strum::AsRefStr;
+use surrealdb::RecordId;
 use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EtfHolding {
-    pub symbol: String,
-    pub weight: f32
+    pub weight: f32,
+    pub holding_of: Etf,
 }
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone)]
@@ -15,7 +16,7 @@ pub enum TickerDatatype {
     HistVolume(String, String),
     HistOHCL(String, String),
 }
-#[derive(AsRefStr, Debug, Clone, Copy)]
+#[derive(AsRefStr, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum Etf {
     SPY,
     QQQ,
@@ -140,4 +141,21 @@ pub enum OptionType {
     Call = 0,
     #[serde(rename = "put")]
     Put = 1,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct EtfTicker {
+    pub components: Vec<RecordId>,
+    pub current_market_price: f32,
+    pub historical_price_data: RecordId,
+    pub symbol: String,
+    pub technicals: RecordId,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct StockTicker {
+    pub historical_price_data: RecordId,
+    pub symbol: String,
+    pub technicals: RecordId,
+    pub market_price: f32,
 }

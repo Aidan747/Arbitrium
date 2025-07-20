@@ -1,9 +1,11 @@
 
+use std::str::FromStr;
+
 use egui::Ui;
 use egui_extras::{Column, TableBuilder};
 use egui_plot::{Line, Plot, PlotPoints};
 use futures::future;
-use crate::{analysis, data::{self, types::{TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
+use crate::{analysis, data::{self, db_service, types::{Etf, TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
 
 use super::renderer::App;
 use chrono::NaiveDate;
@@ -136,6 +138,15 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
         write_data_clicked = ui.button("Send Data to DB").clicked();
     });
 
+    if state.symbol_is_etf {
+        ui.add_space(5.0);
+        if ui.button("Recursively Populate Current ETF Holdings").clicked() {
+            tokio::task::spawn(async {
+                
+            });
+        }
+    }
+
     ui.separator();
 
     if fetch_data_clicked {
@@ -152,19 +163,10 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
 
     if write_data_clicked {
         let input = app.input.clone();
-        let data = state.ticker_data.clone().unwrap();
-        // let database = app.database.clone(); // Ensure `database` implements `Clone`
-        futures::executor::block_on(async {
-            let _ = app.database.use_ns("ETFs").use_db(input).await;
-
-            for entry in data.price_data.iter() {
-                let entry: TickerDataframe = entry.clone();
-                let res: Option<TickerDataframe> = app.database
-                    .upsert(("PriceData", &entry.t))
-                    .merge(entry)
-                    .await
-                    .unwrap();
-                println!("{:#?}", res);
+        let is_etf = state.symbol_is_etf.clone() &&  Etf::from_str(&input).is_ok();
+        tokio::task::spawn(async move {
+            if is_etf {
+                db_service::insert_etf(Etf::from_str(&input).unwrap()).await.unwrap();
             }
         });
     }

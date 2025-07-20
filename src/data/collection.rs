@@ -90,6 +90,8 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         let resp_text = req.send().await?.text().await?;
         let resp_json: serde_json::Value = serde_json::from_str(&resp_text).unwrap();
 
+        // println!("{resp_text}");
+
         let bars = resp_json["bars"][ticker.to_string()]
             .as_array()
             .unwrap_or(&vec![])
@@ -150,6 +152,7 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
 }
 
 pub async fn get_etf_holdings(etf: Etf, n: i32) -> Result<Vec<(String, f32)>, reqwest::Error> {
+
     let url = format!("https://www.alphavantage.co/query?function=ETF_PROFILE&symbol={}&apikey={}", etf.as_ref(), *ALPHA_VANTAGE_API_KEY);
 
     let client = reqwest::Client::new();

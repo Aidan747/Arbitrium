@@ -62,8 +62,9 @@ pub struct App {
     pub queued_operation: QueuedOperation,
 
     pub page: AppPage,
+    
 
-    pub database: &'static LazyLock<Surreal<Client>>
+    // pub database: &'static LazyLock<Surreal<Client>>
 }
 
 impl Default for App {
@@ -73,7 +74,7 @@ impl Default for App {
             messages: Vec::new(),
             queued_operation: QueuedOperation::NOOP,
             page: AppPage::Home,
-            database: &crate::DB
+            // database: &crate::DB
         }
     }
 }

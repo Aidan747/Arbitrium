@@ -6,19 +6,13 @@ mod ui;
 mod data;
 mod analysis;
 
-static DB: LazyLock<Surreal<Client>> = LazyLock::new(Surreal::init);
+
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-
-    DB.connect::<Ws>("127.0.0.1:8000").await?;
-
-    DB.signin(Root {
-        username: "root",
-        password: "root",
-    }).await?;
-
     // analysis::hmm::train_hmm_on_symbol(&DB, "SPY".to_string());
+
+    data::db_service::init_database().await?;
 
     let options = eframe::NativeOptions::default();
     eframe::run_native(
@@ -32,13 +26,21 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::{collection, types::{TickerData, TickerDataframe}};
+    use crate::data::{collection, db_service, types::{TickerData, TickerDataframe}};
 
     use super::*;
 
     #[tokio::test]
     pub async fn test_option_chain_fetch() {
         let ret = collection::get_options_chain("NVDA", None).await.unwrap();
+
+        println!("{:#?}", ret);
+    }
+
+    #[tokio::test]
+    pub async fn test_etf_db_fetch() {
+        db_service::init_database().await.unwrap();
+        let ret = db_service::get_etf(data::types::Etf::SPY).await.unwrap();
 
         println!("{:#?}", ret);
     }
