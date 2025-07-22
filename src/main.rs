@@ -26,23 +26,10 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::{collection, db_service, types::{TickerData, TickerDataframe}};
+    use std::{thread::sleep, time::Duration};
+
+    use crate::{analysis::features::featureset, data::{collection, db_service, types::{TickerData, TickerDataframe}}};
 
     use super::*;
-
-    #[tokio::test]
-    pub async fn test_option_chain_fetch() {
-        let ret = collection::get_options_chain("NVDA", None).await.unwrap();
-
-        println!("{:#?}", ret);
-    }
-
-    #[tokio::test]
-    pub async fn test_etf_db_fetch() {
-        db_service::init_database().await.unwrap();
-        let ret = db_service::get_etf(data::types::Etf::SPY).await.unwrap();
-
-        println!("{:#?}", ret);
-    }
 }
 

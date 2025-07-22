@@ -54,7 +54,7 @@ pub async fn init_database() -> Result<(), surrealdb::Error> {
     Ok(())
 }
 
-pub async fn insert_etf(etf: Etf) -> Result<(), Box<dyn Error>> {
+pub async fn insert_etf(etf: Etf, data: TickerData) -> Result<(), Box<dyn Error>> {
     // for entry in data.price_data.iter() {
     //     let entry: TickerDataframe = entry.clone();
     //     let res: Option<TickerDataframe> = app.database
@@ -69,11 +69,11 @@ pub async fn insert_etf(etf: Etf) -> Result<(), Box<dyn Error>> {
 
 
 
-    let data = super::collection::get_ticker_data(
-        etf.as_ref(),
-        TickerDatatype::HistOHCL("2016-01-01".to_string(), LAST_WEEKDAY.to_string()),
-        PointTimeDelta::Day
-    ).await?;
+    // let data = super::collection::get_ticker_data(
+    //     etf.as_ref(),
+    //     TickerDatatype::HistOHCL("2016-01-01".to_string(), LAST_WEEKDAY.to_string()),
+    //     PointTimeDelta::Day
+    // ).await?;
 
     // println!("{:#?}", data);
 

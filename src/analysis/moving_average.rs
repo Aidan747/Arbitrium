@@ -125,28 +125,35 @@ pub fn macd_on_series(series: Vec<TickerDataframe>, period_short: i32, period_lo
     macd_series
 }
 
-pub fn rsi_on_series(series: Vec<TickerDataframe>) -> Vec<f32> {
-    let period = 14;
+pub fn rsi_on_series(series: Vec<TickerDataframe>, period: usize) -> Vec<f32> {
     let mut rsis = Vec::new();
-
-    if series.len() <= period {
+    
+    if series.len() < 2 {
         return rsis;
     }
 
-    let mut gains = 0.0;
-    let mut losses = 0.0;
+    // Calculate price differences
+    let price_changes: Vec<f32> = series.windows(2)
+        .map(|window| window[1].close - window[0].close)
+        .collect();
 
-    for i in 1..=period {
-        let diff = series[i].close - series[i - 1].close;
-        if diff > 0.0 {
-            gains += diff;
-        } else {
-            losses -= diff;
-        }
+    // Initialize with first possible value
+    let mut avg_gain = price_changes.iter()
+        .take(period)
+        .map(|&x| if x > 0.0 { x } else { 0.0 })
+        .sum::<f32>() / period as f32;
+
+    let mut avg_loss = price_changes.iter()
+        .take(period)
+        .map(|&x| if x < 0.0 { -x } else { 0.0 })
+        .sum::<f32>() / period as f32;
+
+    // Fill initial values with None
+    for _ in 0..period {
+        rsis.push(50.0);
     }
-    let mut avg_gain = gains / period as f32;
-    let mut avg_loss = losses / period as f32;
 
+    // Calculate first RSI
     if avg_loss == 0.0 {
         rsis.push(100.0);
     } else {
@@ -154,10 +161,10 @@ pub fn rsi_on_series(series: Vec<TickerDataframe>) -> Vec<f32> {
         rsis.push(100.0 - (100.0 / (1.0 + rs)));
     }
 
-    for i in (period + 1)..series.len() {
-        let diff = series[i].close - series[i - 1].close;
-        let gain = if diff > 0.0 { diff } else { 0.0 };
-        let loss = if diff < 0.0 { -diff } else { 0.0 };
+    // Calculate remaining RSI values
+    for i in period..price_changes.len() {
+        let gain = if price_changes[i] > 0.0 { price_changes[i] } else { 0.0 };
+        let loss = if price_changes[i] < 0.0 { -price_changes[i] } else { 0.0 };
 
         avg_gain = (avg_gain * (period as f32 - 1.0) + gain) / period as f32;
         avg_loss = (avg_loss * (period as f32 - 1.0) + loss) / period as f32;

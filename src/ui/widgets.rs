@@ -166,7 +166,7 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
         let is_etf = state.symbol_is_etf.clone() &&  Etf::from_str(&input).is_ok();
         tokio::task::spawn(async move {
             if is_etf {
-                db_service::insert_etf(Etf::from_str(&input).unwrap()).await.unwrap();
+                db_service::insert_etf(Etf::from_str(&input).unwrap(), ).await.unwrap();
             }
         });
     }

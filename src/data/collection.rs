@@ -90,7 +90,7 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         let resp_text = req.send().await?.text().await?;
         let resp_json: serde_json::Value = serde_json::from_str(&resp_text).unwrap();
 
-        // println!("{resp_text}");
+        println!("{resp_text}");
 
         let bars = resp_json["bars"][ticker.to_string()]
             .as_array()
