@@ -6,6 +6,9 @@ use std::str::FromStr;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EtfHolding {
+    #[serde(rename = "in")]
+    pub table_in: RecordId,
+    pub out: RecordId,
     pub weight: f32,
     pub holding_of: Etf,
 }
@@ -49,8 +52,8 @@ pub enum PointTimeDelta {
 impl ToString for PointTimeDelta {
     fn to_string(&self) -> String {
         let (val, unit) = match self {
-            PointTimeDelta::Minute(val) => (val.clamp(&1, &59), self.as_ref()),
-            PointTimeDelta::Hour(val) => (val.clamp(&1, &23), self.as_ref()),
+            PointTimeDelta::Minute(val) => (val.clamp(&1, &59), "Min"),
+            PointTimeDelta::Hour(val) => (val.clamp(&1, &23), "H"),
             PointTimeDelta::Day => (&1, self.as_ref()),
             PointTimeDelta::Week => (&1, self.as_ref()),
             PointTimeDelta::Month(val) => {

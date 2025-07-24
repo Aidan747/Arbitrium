@@ -4,6 +4,7 @@ use chrono::NaiveDate;
 use egui::TextStyle;
 use serde::{Deserialize, Serialize};
 use surrealdb::{engine::remote::ws::Client, Surreal};
+use tokio::sync::mpsc::{self};
 
 use crate::{data::{self, types::TickerData}, ui::widgets::{self, data_controller_widget}};
 use egui_plot::{Line, Plot, PlotBounds, PlotPoints};
@@ -13,7 +14,7 @@ pub struct DataPageState {
     pub symbol_is_etf: bool,
     pub from_date: NaiveDate,
     pub to_date: NaiveDate,
-    pub ticker_data: Option<TickerData>
+    pub ticker_data: Option<TickerData>,
 }
 
 #[derive(Debug, Clone, Default)]

@@ -1,16 +1,22 @@
 
-use std::str::FromStr;
+use std::{str::FromStr, sync::Arc};
 
-use egui::Ui;
+use egui::{mutex::Mutex, Ui};
 use egui_extras::{Column, TableBuilder};
 use egui_plot::{Line, Plot, PlotPoints};
 use futures::future;
+use tokio::sync::mpsc;
 use crate::{analysis, data::{self, db_service, types::{Etf, TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
 
 use super::renderer::App;
 use chrono::NaiveDate;
 
-
+lazy_static::lazy_static! {
+    static ref DATA_CHANEL: (mpsc::UnboundedSender<TickerData>, Arc<Mutex<mpsc::UnboundedReceiver<TickerData>>>) = {
+        let (tx, mut rx) = mpsc::unbounded_channel::<TickerData>();
+        (tx, Arc::new(Mutex::new(rx)))
+    };
+}
 
 
 pub fn navbar(app: &mut App, ui: &mut Ui) {
@@ -98,8 +104,18 @@ fn portfolio_holdings_table(app: &mut App, ui: &mut Ui) {
 
 pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
 
-    // let mut from_date = NaiveDate::default();
-    // let mut to_date = NaiveDate::default();
+
+    match DATA_CHANEL.1.as_ref().lock().try_recv() {
+        Err(e) => {
+            // state.ticker_data = None;
+            // println!("{e}")
+        },
+        Ok(d) => {
+            // println!("got data");
+            // println!("{:#?}", d);
+            state.ticker_data = Some(d);
+        },
+    }
 
     let mut fetch_data_clicked: bool = false;
     let mut read_data_clicked: bool = false; 
@@ -151,22 +167,38 @@ pub fn data_controller_widget(app: &mut App, state: &mut DataPageState, ui: &mut
 
     if fetch_data_clicked {
 
-        let data = futures::executor::block_on(
-            data::collection::get_ticker_data(app.input.clone(), TickerDatatype::HistOHCL(state.from_date.to_string(), state.to_date.to_string()), data::types::PointTimeDelta::Day)
-        ).unwrap();
-        
+        // let data = futures::executor::block_on(
+        //     data::collection::get_ticker_data(app.input.clone(), TickerDatatype::HistOHCL(state.from_date.to_string(), state.to_date.to_string()), data::types::PointTimeDelta::Minute(10))
+        // ).unwrap();
+
+
+        let input = app.input.clone();
+        let to = state.to_date;
+        let from = state.from_date;
+
+        let _ = tokio::task::spawn(async move {
+            let data = data::collection::get_ticker_data(
+                input,
+                TickerDatatype::HistOHCL(from.to_string(), to.to_string()),
+                data::types::PointTimeDelta::Minute(10)
+            ).await.unwrap();
+            let _ = DATA_CHANEL.0.send(data).unwrap();
+        });        
         // println!("{:#?}", data);
 
-        state.ticker_data = Some(data);
+        // state.ticker_data = Some(data);
     }
     data_table_widget(app, state, ui);
 
     if write_data_clicked {
         let input = app.input.clone();
-        let is_etf = state.symbol_is_etf.clone() &&  Etf::from_str(&input).is_ok();
+        let is_etf = state.symbol_is_etf.clone() && Etf::from_str(&input).is_ok();
+        let ticker_data = state.ticker_data.clone();
         tokio::task::spawn(async move {
             if is_etf {
-                db_service::insert_etf(Etf::from_str(&input).unwrap(), ).await.unwrap();
+                if let Some(data) = ticker_data {
+                    db_service::insert_etf(Etf::from_str(&input).unwrap(), data).await.unwrap();
+                }
             }
         });
     }
@@ -262,21 +294,13 @@ fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
                         })
                     }
                 );
-                sma_points = PlotPoints::from_iter(analysis::moving_average::sma_on_series(ticker_data.price_data.clone(), 50).iter().enumerate().map(|(date, data)| {
-                    [date as f64, data.close as f64]
-                }));
             }
-
-            
             
             let line = Line::new("ticker_price_over_time", datapoints);
-            let sma = Line::new("sma_lin", sma_points);
+
             Plot::new("ticker_data_plot").show(graph_ui, |graph_inner_ui| {
                 graph_inner_ui.line(line);
-                graph_inner_ui.line(sma);
             });
-
-
         });
     });
 }

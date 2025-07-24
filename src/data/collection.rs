@@ -1,8 +1,11 @@
 use lazy_static::lazy_static;
 use std::result::Result;
+use std::thread;
+use std::time::Duration;
 use chrono::DateTime;
 use chrono::Datelike;
 use chrono_tz::Tz;
+use std::sync::atomic::{AtomicI32, Ordering};
 use super::types::*;
 
 
@@ -54,8 +57,9 @@ lazy_static! {
             }
         }
     };
+    static ref API_CALL_COUNT_THIS_MIN: AtomicI32 = AtomicI32::new(0);
 }
-
+// static mut API_CALL_COUNT: i32 = 0;
 
 pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, point_time_delta: PointTimeDelta,) -> Result<TickerData, reqwest::Error> {
     let (from, to) = match &datatype {
@@ -63,6 +67,7 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
         TickerDatatype::HistVolume(from, to) => (from, to),
         TickerDatatype::HistOHCL(from, to) => (from, to),
     };
+    let call_time = chrono::Local::now().time();
 
     let url = format!("https://data.alpaca.markets/v2/stocks/bars");
 
@@ -81,15 +86,21 @@ pub async fn get_ticker_data(ticker: impl ToString, datatype: TickerDatatype, po
                 ("timeframe", point_time_delta.to_string()),
                 ("start", from.clone()),
                 ("end", to.clone()),
+                ("limit", "10000".to_string()),
             ]);
 
         if let Some(ref token) = next_page_token {
             req = req.query(&[("page_token", token.clone())]);
         }
+        API_CALL_COUNT_THIS_MIN.fetch_add(1, Ordering::SeqCst);
+        if API_CALL_COUNT_THIS_MIN.load(Ordering::SeqCst) >= 197 {
+            println!("sleeping for 1 min...");
+            thread::sleep(Duration::from_secs(60));
+            API_CALL_COUNT_THIS_MIN.store(0, Ordering::SeqCst);
+        }
 
         let resp_text = req.send().await?.text().await?;
         let resp_json: serde_json::Value = serde_json::from_str(&resp_text).unwrap();
-
         println!("{resp_text}");
 
         let bars = resp_json["bars"][ticker.to_string()]
@@ -157,6 +168,7 @@ pub async fn get_etf_holdings(etf: Etf, n: i32) -> Result<Vec<(String, f32)>, re
 
     let client = reqwest::Client::new();
 
+    // API_CALL_COUNT.fetch_add(1, Ordering::SeqCst);
     let response = client
         .get(url)
         .send()

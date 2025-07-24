@@ -1,1 +1,1 @@
-pub mod xgboost;
+pub mod gradient_trees;
