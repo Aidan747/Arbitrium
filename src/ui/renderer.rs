@@ -1,13 +1,8 @@
-use std::{default, sync::LazyLock};
 
 use chrono::NaiveDate;
-use egui::TextStyle;
 use serde::{Deserialize, Serialize};
-use surrealdb::{engine::remote::ws::Client, Surreal};
-use tokio::sync::mpsc::{self};
 
 use crate::{data::{self, types::TickerData}, ui::widgets::{self, data_controller_widget}};
-use egui_plot::{Line, Plot, PlotBounds, PlotPoints};
 
 #[derive(Debug, Clone)]
 pub struct DataPageState {

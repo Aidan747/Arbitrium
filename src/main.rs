@@ -1,6 +1,5 @@
-use std::{error::Error, sync::LazyLock};
+use std::error::Error;
 
-use surrealdb::{engine::remote::ws::{Client, Ws, Wss}, opt::auth::Root, Surreal};
 
 mod ui;
 mod data;

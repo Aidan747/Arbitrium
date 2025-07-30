@@ -1,6 +1,5 @@
-use chrono::NaiveDate;
 
-use crate::data::types::{TickerDataframe, PointTimeDelta};
+use crate::data::types::TickerDataframe;
 
 pub struct MacdPoint {
     pub signal: f32,

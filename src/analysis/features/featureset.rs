@@ -1,10 +1,7 @@
 
-use chrono::{Datelike, Days, Duration, NaiveDate};
-use holiday::{holiday, Holiday, HolidayDate};
 
-use crate::data::types::{TickerData, TickerDataframe};
-use crate::analysis::{self, *};
-use crate::data::*;
+use crate::data::types::TickerData;
+use crate::analysis::{self};
 #[derive(Debug, Clone)]
 pub struct DirectionClassificationFeatures {
     // Price-based features

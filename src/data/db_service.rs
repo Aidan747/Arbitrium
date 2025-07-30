@@ -1,10 +1,10 @@
-use std::{error::Error, f32::consts::E, sync::LazyLock, thread, time::Duration};
+use std::{error::Error, sync::LazyLock};
 
 use chrono::{Datelike, Days, NaiveDate};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use surrealdb::{
-    engine::{local::{Db, RocksDb}, remote::ws::{Client, Ws}}, opt::auth::{Root, Namespace}, RecordId, Surreal
+    engine::local::{Db, RocksDb}, RecordId, Surreal
 };
 
 use crate::data::{db_service::etf_tables::{HIST_PRICE_DATA, STOCK, TECHNICALS}, types::*};

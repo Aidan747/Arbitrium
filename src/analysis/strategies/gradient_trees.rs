@@ -1,14 +1,12 @@
 use std::error::Error;
 
-use linfa_ensemble::{EnsembleLearner, EnsembleLearnerParams, EnsembleLearnerValidParams};
+use linfa_ensemble::{EnsembleLearner, EnsembleLearnerParams};
 // use linfa_ensemble::{EnsembleLearner, EnsembleLearnerParams};
 // use linfa::{Dataset};
-use linfa_trees::{DecisionTree, DecisionTreeParams};
-use linfa::{prelude::*, Label};
+use linfa_trees::DecisionTree;
 use linfa::traits::Fit;
 use ndarray::{Array1, Array2};
 use rand::prelude::*;
-use rand::rngs::SmallRng;
 
 use super::super::features::*;
 
@@ -58,7 +56,7 @@ pub fn train(train: &[featureset::DirectionClassificationFeatures]) -> Result<De
 
 pub fn train_ensemble(train: &[featureset::DirectionClassificationFeatures]) -> Result<EnsembleLearner<DecisionTree<f32, usize>>, Box<dyn Error>> {
     let (features, targets) = prepare_dataset(train);
-    let mut rng = rand::rngs::SmallRng::seed_from_u64(69);
+    let rng = rand::rngs::SmallRng::seed_from_u64(69);
     let dataset = linfa::Dataset::new(features, targets);
 
     let model: EnsembleLearner<DecisionTree<f32, usize>> = EnsembleLearnerParams::new(DecisionTree::<f32, usize>::params()

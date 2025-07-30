@@ -4,16 +4,14 @@ use std::{str::FromStr, sync::Arc};
 use egui::{mutex::Mutex, Ui};
 use egui_extras::{Column, TableBuilder};
 use egui_plot::{Line, Plot, PlotPoints};
-use futures::future;
 use tokio::sync::mpsc;
-use crate::{analysis, data::{self, db_service, types::{Etf, TickerData, TickerDataframe, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
+use crate::{data::{self, db_service, types::{Etf, TickerData, TickerDatatype}}, ui::renderer::{AppPage, DataPageState, TrainTestPageState}};
 
 use super::renderer::App;
-use chrono::NaiveDate;
 
 lazy_static::lazy_static! {
     static ref DATA_CHANEL: (mpsc::UnboundedSender<TickerData>, Arc<Mutex<mpsc::UnboundedReceiver<TickerData>>>) = {
-        let (tx, mut rx) = mpsc::unbounded_channel::<TickerData>();
+        let (tx, rx) = mpsc::unbounded_channel::<TickerData>();
         (tx, Arc::new(Mutex::new(rx)))
     };
 }
@@ -248,7 +246,7 @@ fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
                                 ui.heading("Volume");
                             });                            
                         })
-                        .body(|mut body| {
+                        .body(|body| {
                             if let Some(ticker_data) = &state.ticker_data {
                                 body.rows(20.0, ticker_data.price_data.len(), |mut row| {
                                     let val = ticker_data.price_data.get(row.index()).unwrap();
@@ -282,7 +280,7 @@ fn data_table_widget(app: &mut App, state: &mut DataPageState, ui: &mut Ui) {
         // Right: Plot (75% width)
         ui.vertical(|graph_ui| {
             let mut datapoints = PlotPoints::new(vec![]);
-            let mut sma_points = PlotPoints::new(vec![]);
+            let sma_points = PlotPoints::new(vec![]);
 
             if let Some(ticker_data) = &state.ticker_data {
                 datapoints = PlotPoints::from_iter({
