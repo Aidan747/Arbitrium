@@ -1,8 +1,5 @@
-use std::os::raw;
-use std::str::FromStr;
 
 use chrono::{Datelike, Days, Duration, NaiveDate};
-use holiday::Month::{January, June, March, May};
 use holiday::{holiday, Holiday, HolidayDate};
 
 use crate::data::types::{TickerData, TickerDataframe};
